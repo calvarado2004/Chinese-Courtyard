@@ -1,0 +1,11 @@
+.git
+.qwen
+.jspace
+node_modules
+check
+docs
+README.md
+docker-compose.yml
+**/.DS_Store
+**/__pycache__
+**/*.pyc

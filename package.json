@@ -1,0 +1,14 @@
+{
+  "name": "chinese-courtyard",
+  "version": "1.0.0",
+  "description": "Chinese courtyard house (siheyuan) — Blender-generated models, Three.js viewer",
+  "type": "module",
+  "scripts": {
+    "start": "python3 -m http.server 8080 --directory web",
+    "build": "blender -b -P blender/build.py -- --stage 3",
+    "check-glb": "node tools/check-glb.js models/*.glb"
+  },
+  "dependencies": {
+    "three": "^0.180.0"
+  }
+}

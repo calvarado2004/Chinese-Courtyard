@@ -1,0 +1,40 @@
+name: chinese-courtyard
+
+services:
+  # ---- static viewer: nginx + validated GLB payloads -----------------------
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    image: courtyard/web:latest
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx:size=16m
+      - /var/run:size=1m
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+    labels:
+      org.opencontainers.image.title: "Chinese Courtyard viewer"
+      org.opencontainers.image.description: "Blender-generated siheyuan rendered with Three.js"
+      org.opencontainers.image.source: "https://github.com/calvarado2004/Chinese-Courtyard"
+
+  # ---- model pipeline: rebuild all GLBs with headless Blender --------------
+  #   docker compose --profile pipeline run --rm pipeline
+  pipeline:
+    profiles: ["pipeline"]
+    build:
+      context: .
+      dockerfile: pipeline/Dockerfile
+    image: courtyard/pipeline:latest
+    volumes:
+      - .:/work
+    # outputs land in ./models and mirror into ./web/models (build.py does both)
