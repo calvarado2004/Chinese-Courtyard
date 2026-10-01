@@ -76,9 +76,53 @@ def make_rockery(col, cx, cy, seed=11, scale=1.0, z0=0.0):
               "MossGreen", col, seg=8)
 
 
+def _needle_fan(verts, faces, P, azim, pitch, n, L, w, spread, droop, rng):
+    """Radiating thin needle triangles from P — feathery foliage, not blobs."""
+    for k in range(n):
+        t = (k / (n - 1) - 0.5) if n > 1 else 0.0
+        phi = azim + t * spread + rng.uniform(-0.07, 0.07)
+        zdir = math.sin(pitch) - droop * abs(t) * 2.2
+        dl = math.cos(pitch)
+        nl = math.sqrt(dl * dl + zdir * zdir) or 1.0
+        ndx, ndy, ndz = math.cos(phi) * dl / nl, math.sin(phi) * dl / nl, zdir / nl
+        Lk = L * rng.uniform(0.72, 1.08)
+        i0 = len(verts)
+        verts.append((P[0] - math.sin(phi) * w, P[1] + math.cos(phi) * w, P[2]))
+        verts.append((P[0] + math.sin(phi) * w, P[1] - math.cos(phi) * w, P[2]))
+        verts.append((P[0] + ndx * Lk, P[1] + ndy * Lk, P[2] + ndz * Lk))
+        faces.append((i0, i0 + 1, i0 + 2))
+
+
+def _finalize_merged(name, verts, faces, material, col, smooth=True):
+    """Build mesh, recenter origin to its centroid (so sway pivots right)."""
+    ob = C.new_obj(name, verts, faces, material, col, smooth=smooth)
+    if verts:
+        cx = sum(v[0] for v in verts) / len(verts)
+        cy = sum(v[1] for v in verts) / len(verts)
+        cz = sum(v[2] for v in verts) / len(verts)
+        ob.location = (cx, cy, cz)
+        for v in ob.data.vertices:
+            v.co.x -= cx
+            v.co.y -= cy
+            v.co.z -= cz
+        ob.data.update()
+    return ob
+
+
+def _pine_foliage(verts, faces, tips, crown, rng, scale=1.0):
+    for (px, py, pz, azim) in tips:
+        _needle_fan(verts, faces, (px, py, pz), azim, 0.16, 14, 0.85 * scale, 0.042, 1.5, 0.32, rng)
+        _needle_fan(verts, faces, (px, py, pz), azim + 0.8, 0.05, 12, 0.75 * scale, 0.040, 1.3, 0.36, rng)
+        _needle_fan(verts, faces, (px, py, pz), azim - 0.8, -0.05, 11, 0.68 * scale, 0.038, 1.2, 0.40, rng)
+        _needle_fan(verts, faces, (px, py, pz), azim + 2.1, 0.10, 9, 0.60 * scale, 0.036, 1.0, 0.34, rng)
+    _needle_fan(verts, faces, crown, rng.uniform(0, 6.28), 0.95, 12, 0.72 * scale, 0.038, 2.4, 0.22, rng)
+    _needle_fan(verts, faces, crown, rng.uniform(0, 6.28), 0.80, 12, 0.80 * scale, 0.039, 2.2, 0.24, rng)
+    _needle_fan(verts, faces, crown, rng.uniform(0, 6.28), 0.65, 10, 0.74 * scale, 0.038, 2.0, 0.26, rng)
+
+
 def make_pine(col, cx, cy, h=3.2, seed=5, z0=0.0):
-    """Pine: wandering tapered trunk, root flare, radial branches with
-    clustered foliage clumps — an irregular crown instead of blob pads."""
+    """Pine: wandering tapered trunk, root flare, radial branches, and needle
+    fans (thin radiating triangles) instead of spherical foliage blobs."""
     rng = random.Random(seed)
     tag = f"{cx:.1f}_{cy:.1f}"
     r0 = 0.11 * (0.75 + h / 6.0)
@@ -96,46 +140,39 @@ def make_pine(col, cx, cy, h=3.2, seed=5, z0=0.0):
         z += seg_h
         r *= 0.72
     C.cyl(f"PineRoot{tag}", r0 * 1.9, 0.12, (cx, cy, z0), "WoodDark", col, seg=8, r_top=r0)
-    # branches radiating from the crown, foliage clumps at their tips
-    crown = z
-    zones = []
+    # branches radiating from the crown; needle fans at every tip
+    crown = (x, y, z + 0.18)
+    tips = []
     for b in range(rng.randint(4, 6)):
         a = 2 * math.pi * b / 5 + rng.uniform(-0.35, 0.35)
         bl = rng.uniform(0.55, 1.05) * (0.75 + h / 8.0)
         bx, by = x + math.cos(a) * bl, y + math.sin(a) * bl
-        bz = crown - rng.uniform(0.05, 0.22)
+        bz = z - rng.uniform(0.02, 0.16)
         C.cyl(f"PineBranch{b}_{tag}", 0.05, math.hypot(bx - x, by - y),
-              ((x + bx) / 2, (y + by) / 2, (crown + bz) / 2), "WoodDark", col,
+              ((x + bx) / 2, (y + by) / 2, (z + bz) / 2), "WoodDark", col,
               seg=6, r_top=0.018, rot=(math.pi / 2, 0, a + math.pi / 2))
-        zones.append((bx, by, bz, 0.40))
-        zones.append(((x + bx) / 2, (y + by) / 2, (crown + bz) / 2 + 0.06, 0.30))
-    zones.append((x, y, crown + 0.22, 0.48))
-    zones.append((x + rng.uniform(-0.3, 0.3), y + rng.uniform(-0.3, 0.3), crown + 0.02, 0.36))
-    for i, (px, py, pz, pr) in enumerate(zones):
-        for k in range(rng.randint(2, 3)):
-            s = C.sphere(f"PinePad{i}_{k}_{tag}", pr * rng.uniform(0.72, 1.0),
-                         (px + rng.uniform(-0.16, 0.16), py + rng.uniform(-0.16, 0.16),
-                          pz + rng.uniform(-0.08, 0.08)),
-                         "LeafPine", col, seg=9, ring=6,
-                         scale=(1.0, rng.uniform(0.85, 1.05), 0.55), smooth=True)
-            s.rotation_euler = (0, 0, rng.uniform(0, math.pi))
+        tips.append((bx, by, bz, a))
+        tips.append(((x + bx) / 2, (y + by) / 2, (z + bz) / 2 + 0.05, a))
+        tips.append((x + (bx - x) * 0.25, y + (by - y) * 0.25, z + (bz - z) * 0.25 + 0.08, a))
+    verts, faces = [], []
+    _pine_foliage(verts, faces, tips, crown, rng, scale=0.9 + h / 12.0)
+    _finalize_merged(f"PineFoliage_{tag}", verts, faces, "LeafPine", col)
 
 
 def make_bush(col, cx, cy, s=1.0, seed=5, z0=0.0):
-    """Shrub: cluster of smooth leaf blobs over a couple of twigs."""
+    """Shrub: outward needle-fan sprays over a couple of twigs."""
     rng = random.Random(seed)
     tag = f"{cx:.1f}_{cy:.1f}"
-    for i in range(rng.randint(3, 5)):
-        r = rng.uniform(0.22, 0.40) * s
+    verts, faces = [], []
+    for i in range(rng.randint(4, 6)):
         a = rng.uniform(0, 2 * math.pi)
-        d = rng.uniform(0, 0.22 * s)
-        m = "LeafGreen" if rng.random() < 0.7 else "MossGreen"
-        sph = C.sphere(f"Bush{i}_{tag}", r,
-                       (cx + math.cos(a) * d, cy + math.sin(a) * d, z0 + r * 0.7), m, col,
-                       seg=9, ring=6,
-                       scale=(rng.uniform(0.9, 1.25), rng.uniform(0.9, 1.25), rng.uniform(0.65, 0.9)),
-                       smooth=True)
-        sph.rotation_euler = (0, 0, rng.uniform(0, math.pi))
+        d = rng.uniform(0, 0.20 * s)
+        px, py = cx + math.cos(a) * d, cy + math.sin(a) * d
+        pz = z0 + rng.uniform(0.10, 0.30) * s
+        _needle_fan(verts, faces, (px, py, pz), a, 0.35, 8, 0.30 * s, 0.030, 1.3, 0.28, rng)
+        _needle_fan(verts, faces, (px, py, pz), a + 1.2, 0.15, 6, 0.26 * s, 0.028, 1.0, 0.32, rng)
+    m = "LeafGreen" if rng.random() < 0.7 else "MossGreen"
+    _finalize_merged(f"BushLeaf_{tag}", verts, faces, m, col)
     for i in range(2):
         a = rng.uniform(0, 2 * math.pi)
         C.cyl(f"BushTwig{i}_{tag}", 0.015, rng.uniform(0.2, 0.35) * s,
@@ -170,7 +207,7 @@ def _merged_sphere(verts, faces, cx, cy, cz, r, squash=0.6, seg=8, ring=5, rng=N
 
 
 def make_pine_far(col, cx, cy, h, seed, z0=0.0):
-    """Distant pine: single tapered trunk + one merged irregular crown mesh."""
+    """Distant pine: tapered trunk + one merged needle-fan crown (cheap)."""
     rng = random.Random(seed)
     tag = f"{cx:.0f}_{cy:.0f}"
     r0 = 0.09 * (0.8 + h / 6.0)
@@ -179,32 +216,32 @@ def make_pine_far(col, cx, cy, h, seed, z0=0.0):
           seg=6, r_top=r0 * 0.5, rot=(tilt, lean, 0))
     tx, ty = cx + math.tan(lean) * h * 0.68, cy + math.tan(tilt) * h * 0.68
     verts, faces = [], []
-    n = rng.randint(5, 7)
+    n = rng.randint(4, 6)
+    tips = []
     for k in range(n):
-        r = rng.uniform(0.45, 0.85) * (0.8 + h / 8.0)
         a = 2 * math.pi * k / n + rng.uniform(-0.5, 0.5)
-        d = rng.uniform(0.15, 0.75)
-        _merged_sphere(verts, faces,
-                       tx + math.cos(a) * d, ty + math.sin(a) * d,
-                       z0 + h * 0.62 + (k / n) * h * 0.34 + rng.uniform(-0.1, 0.1),
-                       r * rng.uniform(0.8, 1.0), rng=rng)
-    ob = C.new_obj(f"PineCrownF{tag}", verts, faces, "LeafPine", col, smooth=True)
-    return ob
+        d = rng.uniform(0.15, 0.70)
+        tips.append((tx + math.cos(a) * d, ty + math.sin(a) * d,
+                     z0 + h * 0.62 + (k / n) * h * 0.30 + rng.uniform(-0.08, 0.08), a))
+    _pine_foliage(verts, faces, tips, (tx, ty, z0 + h * 0.86), rng,
+                  scale=0.8 + h / 14.0)
+    return _finalize_merged(f"PineCrownF{tag}", verts, faces, "LeafPine", col)
 
 
 def make_bush_far(col, cx, cy, s, seed, z0=0.0):
-    """Distant shrub: one merged blob cluster (single object)."""
+    """Distant shrub: one merged needle-fan spray (single object)."""
     rng = random.Random(seed)
     verts, faces = [], []
     m = "LeafGreen" if rng.random() < 0.7 else "MossGreen"
-    for i in range(rng.randint(3, 5)):
-        r = rng.uniform(0.22, 0.40) * s
+    for i in range(rng.randint(4, 6)):
         a = rng.uniform(0, 2 * math.pi)
-        d = rng.uniform(0, 0.22 * s)
-        _merged_sphere(verts, faces, cx + math.cos(a) * d, cy + math.sin(a) * d,
-                       z0 + r * 0.7, r, squash=rng.uniform(0.65, 0.9), rng=rng)
+        d = rng.uniform(0, 0.20 * s)
+        px, py = cx + math.cos(a) * d, cy + math.sin(a) * d
+        pz = z0 + rng.uniform(0.10, 0.30) * s
+        _needle_fan(verts, faces, (px, py, pz), a, 0.35, 7, 0.28 * s, 0.028, 1.3, 0.28, rng)
+        _needle_fan(verts, faces, (px, py, pz), a + 1.2, 0.15, 5, 0.24 * s, 0.026, 1.0, 0.32, rng)
     if verts:
-        C.new_obj(f"BushF{cx:.0f}_{cy:.0f}", verts, faces, m, col, smooth=True)
+        _finalize_merged(f"BushF{cx:.0f}_{cy:.0f}", verts, faces, m, col)
 
 
 def make_stump(col, cx, cy, seed, z0=0.0):

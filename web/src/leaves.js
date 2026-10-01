@@ -101,7 +101,7 @@ export function initLeaves(scene) {
   scene.add(mesh);
   // canopy sway in the wind
   scene.traverse((o) => {
-    if (/^PinePad|^BambooLeaf/.test(o.name)) {
+    if (/^PineFoliage|^PineCrownF|^BushLeaf|^BushF|^PinePad|^BambooLeaf/.test(o.name)) {
       sway.push({ o, bx: o.rotation.x, bz: o.rotation.z, p: Math.random() * 9, w: 0.5 + Math.random() * 0.5 });
     }
   });
