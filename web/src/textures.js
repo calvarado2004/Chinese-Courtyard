@@ -82,9 +82,26 @@ export function pavingTexture() {
   });
 }
 
-// Grey brick (青砖) courses in running bond — the classic siheyuan wall.
+// White limewash plaster: subtle mottling only (no blotches).
+export function whitePlasterTexture() {
+  return canvasTex(256, 256, (g, w, h) => {
+    g.fillStyle = '#f1ecdf';
+    g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 700; i++) {
+      const a = Math.random() * 0.05;
+      g.fillStyle = Math.random() > 0.5 ? `rgba(255,255,255,${a})` : `rgba(120,112,94,${a})`;
+      g.fillRect(Math.random() * w, Math.random() * h, 2, 2);
+    }
+    for (let i = 0; i < 350; i++) {
+      g.fillStyle = `rgba(150,142,124,${Math.random() * 0.05})`;
+      g.fillRect(Math.random() * w, Math.random() * h, 1, 1);
+    }
+  });
+}
+
+// Grey brick (青砖) courses in running bond — used for the wall base course.
 // One 256px tile spans ~0.75 m (uv_box scale): courses ≈ 8 cm, bricks ≈ 19 cm.
-export function wallTexture() {
+export function brickTexture() {
   return canvasTex(256, 256, (g, w, h) => {
     const rows = 9, cols = 4;
     const bh = h / rows, bw = w / cols;

@@ -34,6 +34,11 @@ def lattice_window(name, w, h, col, loc, rot=(0, 0, 0), cols=4, rows=5, paper=Tr
     return place_group(parts, loc, rot, name, col)
 
 
+def _wall_skirt(name, col, w, d, x, y, z0, h=0.95):
+    """Grey brick base course (下碱), a hair proud of the white wall."""
+    C.box(name, (w + 0.012, d + 0.012, h), (x, y, z0 + h / 2), "WallBrick", col)
+
+
 def _gable_pane(name, col, roof_axis, plane_c, center, a0, a1,
                 plinth, wall_h, ridge, eave_h, lift, un, span_lo, span_hi):
     """Gable wall whose top edge follows the roof's concave profile, so the
@@ -90,9 +95,9 @@ def make_building(name, col, cx, cy, w, d, wall_h=2.55, ridge_h=5.3, bays=3,
         for i, x in enumerate(xs):
             C.cyl(f"{name}_col{row_y:.1f}_{i}", 0.11, wall_h - 0.05, (x, row_y, plinth), "WoodDark", col)
 
-    def wall_segment(tag, x0, x1, wy, z0, z1):
+    def wall_segment(tag, x0, x1, wy, z0, z1, material="WallWhite"):
         C.box(f"{name}_{tag}", (x1 - x0, wall_t, z1 - z0),
-              ((x0 + x1) / 2, wy, plinth + (z0 + z1) / 2), "WallWhite", col)
+              ((x0 + x1) / 2, wy, plinth + (z0 + z1) / 2), material, col)
 
     for side in (-1, 1):
         wy = cy + side * (hd - wall_t / 2)
@@ -106,6 +111,10 @@ def make_building(name, col, cx, cy, w, d, wall_h=2.55, ridge_h=5.3, bays=3,
                 if seg > 0.05:
                     wall_segment(f"wA{side}_{i}", x0, x0 + seg / 2, wy, 0, wall_h)
                     wall_segment(f"wB{side}_{i}", x1 - seg / 2, x1, wy, 0, wall_h)
+                    _wall_skirt(f"{name}_skirtA{side}_{i}", col, seg / 2, wall_t,
+                                (x0 + x0 + seg / 2) / 2, wy, plinth)
+                    _wall_skirt(f"{name}_skirtB{side}_{i}", col, seg / 2, wall_t,
+                                (x1 - seg / 2 + x1) / 2, wy, plinth)
                 C.box(f"{name}_lintel{side}_{i}", (door_w + 0.1, wall_t, wall_h - door_h),
                       ((x0 + x1) / 2, wy, plinth + door_h + (wall_h - door_h) / 2), "WoodDark", col)
                 leaf_y = wy - side * 0.10
@@ -117,12 +126,14 @@ def make_building(name, col, cx, cy, w, d, wall_h=2.55, ridge_h=5.3, bays=3,
                     C.box(f"{name}_rearstep", (2.1, 0.30, plinth), (cx, cy + hd + 0.15, plinth / 2), "StoneGray", col)
             elif side == -1 and windows and door_bay is not None:
                 skirt_h, win_h = 0.42, 1.55
-                wall_segment(f"skirt{side}_{i}", x0, x1, wy, 0, skirt_h)
+                wall_segment(f"skirt{side}_{i}", x0, x1, wy, 0, skirt_h, material="WallBrick")
                 wall_segment(f"top{side}_{i}", x0, x1, wy, skirt_h + win_h, wall_h)
                 lattice_window(f"{name}_win{side}_{i}", bw - 0.1, win_h, col,
                                ((x0 + x1) / 2, wy, plinth + skirt_h + win_h / 2))
             else:
                 wall_segment(f"w{side}_{i}", x0, x1, wy, 0, wall_h)
+                _wall_skirt(f"{name}_bskirt{side}_{i}", col, x1 - x0, wall_t,
+                            (x0 + x1) / 2, wy, plinth)
 
     # roof geometry (also used by the gable panes so profiles match exactly)
     L = d + 2 * overhang if roof_axis == 'y' else w
@@ -148,6 +159,7 @@ def make_building(name, col, cx, cy, w, d, wall_h=2.55, ridge_h=5.3, bays=3,
                 length = b - a
                 if kind == "wall":
                     C.box(f"{name}_gwall{a:.1f}", (wall_t, length, wall_h), (sx, yc, plinth + wall_h / 2), "WallWhite", col)
+                    _wall_skirt(f"{name}_gbskirt{a:.1f}", col, wall_t, length, sx, yc, plinth)
                 elif kind == "door":
                     C.box(f"{name}_gdoorT", (wall_t, length, wall_h - door_h), (sx, yc, plinth + door_h + (wall_h - door_h) / 2), "WallWhite", col)
                     for sgn in (-1, 1):
@@ -156,24 +168,29 @@ def make_building(name, col, cx, cy, w, d, wall_h=2.55, ridge_h=5.3, bays=3,
                               "WoodDark", col)
                 else:
                     skirt_h, win_h = 0.42, 1.55
-                    C.box(f"{name}_gskirt{a:.1f}", (wall_t, length, skirt_h), (sx, yc, plinth + skirt_h / 2), "WallWhite", col)
+                    C.box(f"{name}_gskirt{a:.1f}", (wall_t, length, skirt_h), (sx, yc, plinth + skirt_h / 2), "WallBrick", col)
                     C.box(f"{name}_gtop{a:.1f}", (wall_t, length, wall_h - skirt_h - win_h), (sx, yc, plinth + skirt_h + win_h + (wall_h - skirt_h - win_h) / 2), "WallWhite", col)
                     lattice_window(f"{name}_gwin{a:.1f}", length - 0.06, win_h, col,
                                    (sx, yc, plinth + skirt_h + win_h / 2), rot=(0, 0, math.pi / 2),
                                    paper_side=side)
         else:
             C.box(f"{name}_sidewall{side}", (wall_t, d - 0.34, wall_h), (sx, cy, plinth + wall_h / 2), "WallWhite", col)
+            _wall_skirt(f"{name}_sskirt{side}", col, wall_t, d - 0.34, sx, cy, plinth)
         # gable infill follows the roof profile — a straight triangle leaves a
         # crescent gap under the concave t^1.4 roof curve
         if roof_axis == 'x':
             _gable_pane(f"{name}_gable{side}", col, 'x', sx, cy,
                         -(hd - 0.2), hd - 0.2, plinth, wall_h, ridge, eave_h,
                         roof_lift, abs(sx - cx) / (L / 2), S / 2, S / 2)
+            _wall_skirt(f"{name}_panskirt{side}", col, wall_t, 2 * (hd - 0.2),
+                        sx, cy, plinth)
         else:
             ey = cy + side * (hd - wall_t / 2)
             _gable_pane(f"{name}_gable{side}", col, 'y', ey, cx,
                         -(hw - 0.2), hw - 0.2, plinth, wall_h, ridge, eave_h,
                         roof_lift, abs(ey - cy) / (L / 2), span_lo, span_hi)
+            _wall_skirt(f"{name}_panskirt{side}", col, 2 * (hw - 0.2), wall_t,
+                        cx, ey, plinth)
 
     # roof + ridge; tiles are a separate corrugated field just above the surface
     # x-ridge roofs end flush with the gable walls (硬山) so the hall cannot
@@ -205,12 +222,14 @@ def enclosure_wall(col):
     for tag, (x, y), (sx, sy), _ in segs:
         C.box(f"WallPerim{tag}", (sx, sy, H), (x, y, H / 2), "WallWhite", col)
         C.box(f"WallPerim{tag}Cap", (sx + 0.12, sy + 0.12, 0.09), (x, y, H + 0.045), "WallCap", col)
+        _wall_skirt(f"WallPerim{tag}Skirt", col, sx, sy, x, y, 0.0)
     # south wall with a 1.9 m entry gap aligned to the gatehouse door (x 0.55..2.45)
     y = -D / 2 + T / 2
     parts = [((-W / 2, 0.55), "S1"), ((2.45, W / 2), "S2")]
     for (a, b), tag in parts:
         C.box(f"WallPerim{tag}", (b - a, T, H), ((a + b) / 2, y, H / 2), "WallWhite", col)
         C.box(f"WallPerim{tag}Cap", (b - a + 0.12, T + 0.12, 0.09), ((a + b) / 2, y, H + 0.045), "WallCap", col)
+        _wall_skirt(f"WallPerim{tag}Skirt", col, b - a, T, (a + b) / 2, y, 0.0)
     C.box("WallPerimSHeader", (1.9, T, H - DH), (1.5, y, DH + (H - DH) / 2), "WallWhite", col)
     C.box("WallPerimSHeaderCap", (1.9 + 0.12, T + 0.12, 0.09), (1.5, y, H + 0.045), "WallCap", col)
 
@@ -227,6 +246,9 @@ def moon_gate_wall(col):
     # trim band proud of both wall faces around the opening
     C.torus("MoonTrim", R + 0.06, 0.17, (gx, y, R), "WallCap", col, rot=(math.pi / 2, 0, 0))
     C.box("WallMoonCap", (x1 - x0 + 0.1, T + 0.14, 0.08), ((x0 + x1) / 2, y, H + 0.04), "WallCap", col)
+    # brick skirt stops clear of the moon-gate opening
+    _wall_skirt("WallMoonSkirtL", col, (gx - R - 0.08) - x0, T, (x0 + gx - R - 0.08) / 2, y, 0.0)
+    _wall_skirt("WallMoonSkirtR", col, x1 - (gx + R + 0.08), T, (gx + R + 0.08 + x1) / 2, y, 0.0)
     lattice_window("MoonWallWin", 0.78, 0.78, col, (7.3, y, 1.35), cols=3, rows=3, paper=False)
 
 

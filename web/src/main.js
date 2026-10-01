@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { Reflector } from 'three/addons/objects/Reflector.js';
-import { roofTexture, pavingTexture, glowTexture, grassTexture, wallTexture } from './textures.js';
+import { roofTexture, pavingTexture, glowTexture, grassTexture, whitePlasterTexture, brickTexture } from './textures.js';
 import { loadCritters, updateLife } from './life.js';
 import { initLeaves, updateLeaves } from './leaves.js';
 
@@ -161,8 +161,12 @@ function upgradeMaterials(root) {
         m.map = grassTexture();
         m.color = new THREE.Color(0xffffff);
         m.roughness = 1.0;
+      } else if (m.name === 'WallBrick' && !m.map) {
+        m.map = brickTexture();
+        m.color = new THREE.Color(0xffffff);
+        m.roughness = 0.95;
       } else if (m.name === 'WallWhite' && !m.map) {
-        m.map = wallTexture();
+        m.map = whitePlasterTexture();
         m.color = new THREE.Color(0xffffff);
         m.roughness = 0.93;
       } else if (m.name === 'PaperWarm') {

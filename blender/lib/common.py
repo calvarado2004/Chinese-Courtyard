@@ -23,6 +23,7 @@ def get_col(name):
 
 PALETTE = {
     "WallWhite":    ((0.898, 0.878, 0.827), 0.95, 0.0, None, 0.0),
+    "WallBrick":    ((0.376, 0.384, 0.384), 0.95, 0.0, None, 0.0),
     "WallCap":      ((0.176, 0.180, 0.196), 0.85, 0.0, None, 0.0),
     "RoofTile":     ((0.118, 0.133, 0.161), 0.62, 0.0, None, 0.0),
     "RidgeCap":     ((0.078, 0.086, 0.102), 0.55, 0.0, None, 0.0),
@@ -134,8 +135,8 @@ def box(name, size, loc, material, col, rot=(0, 0, 0)):
          (-hx, -hy, hz), (hx, -hy, hz), (hx, hy, hz), (-hx, hy, hz)]
     f = [(0, 3, 2, 1), (4, 5, 6, 7), (0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)]
     ob = place(new_obj(name, v, f, material, col), loc, rot)
-    if material == "WallWhite":
-        uv_box(ob)   # walls need UVs or the browser plaster texture can't show
+    if material in ("WallWhite", "WallBrick"):
+        uv_box(ob)   # walls need UVs or the browser wall textures can't show
     return ob
 
 
