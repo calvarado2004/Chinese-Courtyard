@@ -63,6 +63,7 @@ def _gable_pane(name, col, roof_axis, plane_c, center, a0, a1,
     ob.data.materials.append(C.mat("WallWhite"))
     col.objects.link(ob)
     C.solidify(ob, 0.14, offset=0.0)
+    C.uv_box(ob)
 
 
 def make_building(name, col, cx, cy, w, d, wall_h=2.55, ridge_h=5.3, bays=3,

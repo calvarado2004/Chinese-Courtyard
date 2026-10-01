@@ -107,13 +107,36 @@ def place(ob, loc=(0, 0, 0), rot=(0, 0, 0), scale=(1, 1, 1)):
     return ob
 
 
+def uv_box(ob, scale=0.75):
+    """Per-face box projection: each face is mapped from the plane that faces it."""
+    me = ob.data
+    uvl = me.uv_layers.new(name="UVMap")
+    i = 0
+    for poly in me.polygons:
+        n = poly.normal
+        ax = max(range(3), key=lambda k: abs(n[k]))
+        for li in poly.loop_indices:
+            co = me.vertices[me.loops[li].vertex_index].co
+            if ax == 2:
+                u, v = co.x, co.y
+            elif ax == 0:
+                u, v = co.y, co.z
+            else:
+                u, v = co.x, co.z
+            uvl.data[i].uv = (u / scale, v / scale)
+            i += 1
+
+
 def box(name, size, loc, material, col, rot=(0, 0, 0)):
     sx, sy, sz = size
     hx, hy, hz = sx / 2, sy / 2, sz / 2
     v = [(-hx, -hy, -hz), (hx, -hy, -hz), (hx, hy, -hz), (-hx, hy, -hz),
          (-hx, -hy, hz), (hx, -hy, hz), (hx, hy, hz), (-hx, hy, hz)]
     f = [(0, 3, 2, 1), (4, 5, 6, 7), (0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)]
-    return place(new_obj(name, v, f, material, col), loc, rot)
+    ob = place(new_obj(name, v, f, material, col), loc, rot)
+    if material == "WallWhite":
+        uv_box(ob)   # walls need UVs or the browser plaster texture can't show
+    return ob
 
 
 def cyl(name, r, h, loc, material, col, seg=14, rot=(0, 0, 0), base=True, r_top=None):

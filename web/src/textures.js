@@ -82,24 +82,34 @@ export function pavingTexture() {
   });
 }
 
-// Soft stucco plaster for white walls: trowel bands + mottling.
+// Soft stucco plaster for white walls: tone patches, trowel bands, mottling.
 export function wallTexture() {
   return canvasTex(256, 256, (g, w, h) => {
     const rnd = mulberry(3);
-    g.fillStyle = '#e5e0d3';
+    g.fillStyle = '#e6e1d4';
     g.fillRect(0, 0, w, h);
-    for (let i = 0; i < 9; i++) {   // broad trowel bands, faint
+    // broad tone patches so large walls vary
+    for (let i = 0; i < 10; i++) {
+      const x = rnd() * w, y = rnd() * h, r = 18 + rnd() * 40;
+      const grad = g.createRadialGradient(x, y, 0, x, y, r);
+      const lite = rnd() > 0.45;
+      grad.addColorStop(0, lite ? 'rgba(248,244,232,0.5)' : 'rgba(196,188,168,0.42)');
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = grad;
+      g.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+    for (let i = 0; i < 9; i++) {   // faint trowel bands
       const y = i * h / 9 + rnd() * 6;
-      g.fillStyle = `rgba(${205 + rnd() * 34},${199 + rnd() * 34},${182 + rnd() * 32},0.22)`;
+      g.fillStyle = `rgba(${204 + rnd() * 36},${197 + rnd() * 36},${178 + rnd() * 34},0.30)`;
       g.fillRect(0, y, w, 8 + rnd() * 14);
     }
-    for (let i = 0; i < 1100; i++) {   // mottling
-      const a = Math.random() * 0.05;
-      g.fillStyle = Math.random() > 0.5 ? `rgba(255,255,255,${a})` : `rgba(96,88,70,${a})`;
+    for (let i = 0; i < 1300; i++) {   // mottling
+      const a = Math.random() * 0.10;
+      g.fillStyle = Math.random() > 0.5 ? `rgba(255,255,255,${a})` : `rgba(88,80,62,${a})`;
       g.fillRect(Math.random() * w, Math.random() * h, 2, 2);
     }
-    for (let i = 0; i < 600; i++) {   // fine grain
-      g.fillStyle = `rgba(118,110,92,${Math.random() * 0.05})`;
+    for (let i = 0; i < 800; i++) {   // fine grain
+      g.fillStyle = `rgba(112,104,86,${Math.random() * 0.07})`;
       g.fillRect(Math.random() * w, Math.random() * h, 1, 1);
     }
   });
