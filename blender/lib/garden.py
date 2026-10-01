@@ -312,6 +312,36 @@ def make_path(col, pts, width=0.5, seed=13, thick=0.045, z0=0.0, zfn=None):
                   "PathStone", col, rot=(0, 0, rng.uniform(-0.2, 0.2)))
 
 
+def make_paved_walk(col, pts, width=0.9, seed=37, zfn=None):
+    """Continuous flagstone walkway: slabs along a polyline + edge strips."""
+    rng = random.Random(seed)
+    pid = _PATH_SEQ[0]
+    _PATH_SEQ[0] += 1
+    for i in range(len(pts) - 1):
+        x0, y0 = pts[i]
+        x1, y1 = pts[i + 1]
+        dx, dy = x1 - x0, y1 - y0
+        dist = math.hypot(dx, dy)
+        ang = math.atan2(dy, dx)
+        n = max(1, int(round(dist / 0.72)))
+        for k in range(n):
+            t = (k + 0.5) / n
+            x, y = x0 + dx * t, y0 + dy * t
+            zb = (zfn(x, y) - 0.02) if zfn else 0.0
+            slab = C.box(f"PathW{pid}_{i}_{k}", (width * rng.uniform(0.92, 1.05), dist / n - 0.05, 0.06),
+                         (x, y, zb + 0.03), "PathStone", col, rot=(0, 0, ang))
+            if zfn is None:
+                C.uv_planar_top(slab, scale=0.9)
+        # darker edge strips along the segment
+        for sgn in (-1, 1):
+            nx, ny = -dy / dist, dx / dist
+            zb = (zfn(x0 + dx / 2, y0 + dy / 2) - 0.02) if zfn else 0.0
+            C.box(f"PathE{pid}_{i}_{sgn}", (0.07, dist + 0.05, 0.045),
+                  ((x0 + x1) / 2 + nx * sgn * (width / 2 + 0.035),
+                   (y0 + y1) / 2 + ny * sgn * (width / 2 + 0.035), zb + 0.0225),
+                  "StoneGray", col, rot=(0, 0, ang))
+
+
 def make_planting_strip(col, x0, y0, x1, y1, seed=17):
     """Dark soil strip with moss blobs along a wall."""
     rng = random.Random(seed)
@@ -461,12 +491,11 @@ def build(col):
     make_lantern(col, 1.55, -1.5)
     make_lantern(col, 4.75, -0.85, h=0.9)
     make_lantern(col, -1.9, 2.7)
-    # paths — main axis runs gatehouse → main hall; branches fork off it
-    make_path(col, [(1.5, -3.05), (1.5, -1.9), (1.45, -0.75), (1.5, 0.45), (1.35, 1.42)],
-              width=0.6, seed=36)
-    make_path(col, [(1.5, -2.55), (0.9, -1.6), (0.85, -0.5), (0.85, 0.85)], width=0.5, seed=13)
-    make_path(col, [(1.5, -2.7), (0.2, -3.0), (-1.2, -2.85), (-2.6, -2.9), (-3.6, -2.6)],
-              width=0.45, seed=33)
+    # paths — paved walk runs gatehouse door → main hall steps (hall door x=0)
+    make_paved_walk(col, [(1.5, -3.05), (1.15, -2.2), (0.65, -1.05), (0.3, 0.0), (0.08, 0.85), (0.0, 1.32)],
+                    width=0.9, seed=37)
+    # stepping-stone branches off the walk
+    make_path(col, [(0.65, -1.05), (-0.4, -2.0), (-1.9, -2.5), (-3.6, -2.6)], width=0.45, seed=33)
     # diagonal stepping stones through the moon gate toward the pond
     make_path(col, [(5.6, -4.8), (5.2, -4.15), (5.0, -3.6), (4.6, -2.8), (4.2, -1.7), (3.85, -0.7)],
               width=0.45, seed=27)
@@ -504,8 +533,34 @@ def build(col):
     make_leaf_litter(col, -7.4, -5.3, 0.8, 22, 73)
     make_leaf_litter(col, 5.0, -3.3, 0.55, 10, 74)
 
+    # courtyard accents: shrubs and weathered stones clear of paths and pond
+    make_bush(col, -2.6, 2.3, s=0.9, seed=131)
+    make_bush(col, -4.3, -1.2, s=0.8, seed=132)
+    make_bush(col, 2.3, 2.9, s=0.85, seed=133)
+    make_bush(col, 4.6, 2.6, s=0.9, seed=134)
+    for i, (x, y) in enumerate([(-3.4, 1.6), (1.9, 3.2), (3.6, 2.4)]):
+        st = C.sphere(f"RockeryCourt{i}", 0.13 + 0.03 * i, (x, y, 0.045), "RockGray", col,
+                      seg=7, ring=5, scale=(1.1, 0.9, 0.7))
+        st.rotation_euler = (0.05, 0.03, 0.7 * i)
     # ---- surrounding landscape (outside the enclosure walls) ----
     make_terrain(col)
+    # secondary pass: bushes and rocks only, offset grid for denser coverage
+    rngb = random.Random(151)
+    for gy in range(-26, 27, 4):
+        for gx in range(-38, 39, 4):
+            x = gx + 2.0 + rngb.uniform(-1.4, 1.4)
+            y = gy + 2.0 + rngb.uniform(-1.4, 1.4)
+            if abs(x) < 11.0 and abs(y) < 9.0:
+                continue                       # compound + near ring: hand-placed
+            if -1.5 < x < 4.5 and y < -5.5:
+                continue                       # south entry corridor / road
+            z = terrain_z(x, y) - 0.02
+            if rngb.random() < 0.62:
+                make_bush_far(col, x, y, rngb.uniform(0.8, 1.6), seed=500 + gx * 29 + gy, z0=z)
+            else:
+                r = rngb.uniform(0.12, 0.34)
+                C.sphere(f"RockeryR{gx}_{gy}", r, (x, y, z + r * 0.3), "RockGray", col,
+                         seg=7, ring=5, scale=(1.1, 0.95, 0.7))
     # jittered grid fill across the whole meadow; near ring is hand-placed below
     rngg = random.Random(150)
     for gy in (-28, -23, -18, -13, -8, -3, 2, 7, 12, 17, 22, 27):

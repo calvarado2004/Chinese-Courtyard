@@ -17,9 +17,8 @@ Time of day cycles **day → sunset → night** (`N`); the app opens at sunset.
 |---|---|
 | ![aerial](docs/screenshots/landscape_aerial.png) | ![plan](docs/screenshots/plan_top.png) |
 | _The compound in its landscape_ | _Roof-hid plan view (press `R`)_ |
-
-![roofs](docs/screenshots/roofs_west.png)
-_Tiled roofs: flush gable ends on the hall, wings tucked under the main eave._
+| ![moongate](docs/screenshots/moongate_view.png) | ![roofs](docs/screenshots/roofs_west.png) |
+| _Through the moon gate toward the pond_ | _Tiled roofs: flush gable ends, wings under the main eave_ |
 
 ## Run it
 

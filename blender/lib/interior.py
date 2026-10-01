@@ -23,6 +23,7 @@ def armchair(name, col, x, y, rot, mat="WoodWarm", floor=0.0):
     Parts are relative to the floor; the group empty carries the floor height."""
     before = set(o.name for o in col.objects)
     C.box(f"{name}_seat", (0.52, 0.5, 0.07), (0, 0, 0.46), mat, col)
+    C.box(f"{name}_pad", (0.46, 0.44, 0.05), (0, 0, 0.52), "FabricRed", col)
     C.cyl(f"{name}_back", 0.30, 0.09, (0, 0.06, 0.78), mat, col, seg=10, rot=(math.pi / 2, 0, 0), base=False)
     C.box(f"{name}_backfill", (0.5, 0.05, 0.30), (0, 0.22, 0.72), mat, col)
     _legs(name, col, 0, 0, 0.5, 0.46, 0.44, mat)
@@ -45,6 +46,8 @@ def teaset(name, col, x, y, z=0.87):
     C.sphere(f"{name}_pot", 0.055, (x, y, z + 0.04), "CeramicWhite", col, seg=10, ring=7, scale=(1.0, 1.0, 0.72))
     C.cyl(f"{name}_spout", 0.014, 0.07, (x + 0.055, y, z + 0.06), "CeramicWhite", col, seg=6, rot=(0, math.pi / 2, 0))
     C.torus(f"{name}_handle", 0.035, 0.011, (x - 0.062, y, z + 0.04), "CeramicWhite", col, rot=(0, math.pi / 2, 0))
+    C.cyl(f"{name}_lid", 0.034, 0.014, (x, y, z + 0.076), "CeramicWhite", col, seg=10)
+    C.sphere(f"{name}_knob", 0.011, (x, y, z + 0.094), "CeramicWhite", col, seg=8, ring=5)
     for i in range(4):
         a = 2 * math.pi * i / 4 + 0.5
         C.cyl(f"{name}_cup{i}", 0.022, 0.024, (x + 0.19 * math.cos(a), y + 0.19 * math.sin(a), z),
@@ -58,8 +61,15 @@ def build(col):
         C.box(f"Furn_Screen{i}f", (0.88, 0.05, 1.75), (dx, 5.82 + abs(rot), z + 0.875), "WoodDark", col, rot=(0, -rot, 0))
         C.box(f"Furn_Screen{i}p", (0.80, 0.02, 1.55), (dx, 5.82 + abs(rot) - 0.04, z + 0.875), "FabricIndigo", col, rot=(0, -rot, 0))
     table("Furn_AltarTable", col, 0, 5.35, 2.3, 0.5, z + 0.92, floor=z)
-    C.cyl("Furn_VaseNeck", 0.05, 0.16, (-0.6, 5.35, z + 1.06), "CeramicWhite", col, seg=10, r_top=0.07)
+    C.box("Furn_AltarApron", (2.14, 0.40, 0.09), (0, 5.35, z + 0.795), "WoodDark", col)
     C.sphere("Furn_VaseBody", 0.10, (-0.6, 5.35, z + 1.0), "CeramicWhite", col, seg=10, ring=7, scale=(1.0, 1.0, 0.9))
+    C.cyl("Furn_VaseNeck", 0.05, 0.16, (-0.6, 5.35, z + 1.06), "CeramicWhite", col, seg=10, r_top=0.07)
+    C.sphere("Furn_VaseBody2", 0.10, (0.6, 5.35, z + 1.0), "CeramicWhite", col, seg=10, ring=7, scale=(1.0, 1.0, 0.9))
+    C.cyl("Furn_VaseNeck2", 0.05, 0.16, (0.6, 5.35, z + 1.06), "CeramicWhite", col, seg=10, r_top=0.07)
+    C.cyl("Furn_Incense", 0.05, 0.05, (0, 5.35, z + 0.945), "CeramicWhite", col, seg=10)
+    for i, a in enumerate((-0.35, 0.0, 0.35)):
+        C.cyl(f"Furn_Stick{i}", 0.003, 0.17, (0.015 * i, 5.35, z + 1.02), "WoodDark", col,
+              seg=4, rot=(0.05 * i, 0, a))
     armchair("Furn_ChairL", col, -1.05, 4.55, 0.35, floor=z)
     armchair("Furn_ChairR", col, 1.05, 4.55, -0.35, floor=z)
     table("Furn_TeaTable", col, 0, 4.55, 0.85, 0.75, z + 0.72, floor=z)
@@ -72,12 +82,16 @@ def build(col):
     tx, ty = 6.8, -0.2
     C.cyl("Furn_TeaTableTop", 0.52, 0.05, (tx, ty, z + 0.58), "WoodWarm", col, seg=14, base=False)
     _legs("Furn_TeaTable", col, tx, ty, 0.8, 0.8, 0.555, z0=z)
+    C.torus("Furn_TeaRing", 0.28, 0.013, (tx, ty, z + 0.12), "WoodWarm", col)
     teaset("Furn_TeaSet", col, tx, ty, z=z + 0.605)
     for i, (dx, dy, m) in enumerate([(-0.85, 0, "FabricRed"), (0.85, 0, "FabricIndigo"),
                                      (0, -0.85, "FabricRed"), (0, 0.85, "FabricIndigo")]):
         cushion(f"Furn_TeaCushion{i}", col, tx + dx, ty + dy, m, floor=z)
     C.box("Furn_Shelf", (1.4, 0.24, 0.04), (7.6, 2.94, z + 1.35), "WoodWarm", col)
     C.box("Furn_Shelf2", (1.4, 0.24, 0.04), (7.6, 2.94, z + 1.0), "WoodWarm", col)
+    for i in range(4):
+        C.box(f"Furn_Book{i}", (0.035, 0.16, 0.22), (7.06 + i * 0.09, 2.94, z + 1.13),
+              "FabricIndigo" if i % 2 else "FabricRed", col)
     for i in range(3):
         C.cyl(f"Furn_Jar{i}", 0.055, 0.16, (7.2 + i * 0.4, 2.94, z + 1.02), "CeramicWhite", col, seg=9)
     C.box("Furn_Scroll", (0.02, 0.45, 1.15), (8.45, 0.9, z + 1.55), "PaperWarm", col)
@@ -97,6 +111,8 @@ def build(col):
     C.box("Furn_BedBase", (1.5, 2.1, 0.26), (bx, by, z + 0.13), "WoodWarm", col)
     C.box("Furn_BedMattress", (1.36, 1.96, 0.14), (bx, by, z + 0.33), "FabricIndigo", col)
     C.box("Furn_BedPillow", (0.42, 0.62, 0.09), (bx - 0.35, by + 0.6, z + 0.44), "FabricRed", col)
+    C.box("Furn_BedBlanket", (1.44, 1.0, 0.05), (bx, by - 0.44, z + 0.42), "FabricRed", col)
+    C.box("Furn_BedHeadboard", (1.5, 0.06, 0.55), (bx, by + 1.06, z + 0.53), "WoodWarm", col)
     for sx in (-1, 1):
         for sy in (-1, 1):
             C.cyl(f"Furn_BedPost{sx}{sy}", 0.035, 1.35, (bx + sx * 0.68, by + sy * 0.98, z + 0.26), "WoodWarm", col, seg=7)
@@ -105,10 +121,18 @@ def build(col):
     C.box("Furn_BedRailXL", (0.045, 2.0, 0.05), (bx - 0.68, by, z + 1.58), "WoodWarm", col)
     C.box("Furn_BedRailXR", (0.045, 2.0, 0.05), (bx + 0.68, by, z + 1.58), "WoodWarm", col)
     C.box("Furn_Wardrobe", (0.55, 1.5, 1.4), (-8.18, 0.4, z + 0.7), "WoodWarm", col)
-    C.box("Furn_WardrobeDoor", (0.03, 1.4, 1.25), (-7.89, 0.4, z + 0.68), "WoodDark", col)
+    C.box("Furn_WardDoorL", (0.03, 0.62, 1.25), (-7.89, 0.13, z + 0.68), "WoodDark", col)
+    C.box("Furn_WardDoorR", (0.03, 0.62, 1.25), (-7.89, 0.67, z + 0.68), "WoodDark", col)
+    C.sphere("Furn_WardKnobL", 0.014, (-7.86, 0.40, z + 0.68), "MetalBrass", col, seg=6, ring=4)
+    C.sphere("Furn_WardKnobR", 0.014, (-7.86, 0.40, z + 0.68), "MetalBrass", col, seg=6, ring=4)
     C.cyl("Furn_LampPole", 0.025, 1.15, (-5.6, -1.9, z), "WoodDark", col, seg=7)
     C.cyl("Furn_LampBase", 0.13, 0.04, (-5.6, -1.9, z + 0.02), "WoodDark", col, seg=10)
     C.cyl("Furn_LampShade", 0.11, 0.24, (-5.6, -1.9, z + 1.02), "PaperWarm", col, seg=10, r_top=0.13)
     C.box("Furn_BedScreen0", (0.7, 0.04, 1.3), (-6.1, -1.0, z + 0.65), "WoodDark", col, rot=(0, 0.2, 0.5))
     C.box("Furn_BedScreen1", (0.7, 0.04, 1.3), (-6.6, -1.4, z + 0.65), "WoodDark", col, rot=(0, -0.2, 0.5))
-    C.cyl("Furn_Stool", 0.19, 0.36, (-6.4, 0.2, z), "WoodWarm", col, seg=10)
+    C.cyl("Furn_StoolSeat", 0.19, 0.05, (-6.4, 0.2, z + 0.335), "WoodWarm", col, seg=10)
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            C.cyl(f"Furn_StoolLeg{sx}{sy}", 0.018, 0.31, (-6.4 + sx * 0.13, 0.2 + sy * 0.13, z),
+                  "WoodDark", col, seg=6)
+    C.torus("Furn_StoolRing", 0.155, 0.010, (-6.4, 0.2, z + 0.10), "WoodDark", col)

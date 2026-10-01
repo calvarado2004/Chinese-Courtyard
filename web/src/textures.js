@@ -82,6 +82,29 @@ export function pavingTexture() {
   });
 }
 
+// Soft stucco plaster for white walls: trowel bands + mottling.
+export function wallTexture() {
+  return canvasTex(256, 256, (g, w, h) => {
+    const rnd = mulberry(3);
+    g.fillStyle = '#e5e0d3';
+    g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 9; i++) {   // broad trowel bands, faint
+      const y = i * h / 9 + rnd() * 6;
+      g.fillStyle = `rgba(${205 + rnd() * 34},${199 + rnd() * 34},${182 + rnd() * 32},0.22)`;
+      g.fillRect(0, y, w, 8 + rnd() * 14);
+    }
+    for (let i = 0; i < 1100; i++) {   // mottling
+      const a = Math.random() * 0.05;
+      g.fillStyle = Math.random() > 0.5 ? `rgba(255,255,255,${a})` : `rgba(96,88,70,${a})`;
+      g.fillRect(Math.random() * w, Math.random() * h, 2, 2);
+    }
+    for (let i = 0; i < 600; i++) {   // fine grain
+      g.fillStyle = `rgba(118,110,92,${Math.random() * 0.05})`;
+      g.fillRect(Math.random() * w, Math.random() * h, 1, 1);
+    }
+  });
+}
+
 // Meadow/earth ground for the terrain outside the walls.
 export function grassTexture() {
   return canvasTex(256, 256, (g, w, h) => {
