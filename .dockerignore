@@ -4,6 +4,7 @@
 node_modules
 check
 docs
+blends
 README.md
 docker-compose.yml
 **/.DS_Store

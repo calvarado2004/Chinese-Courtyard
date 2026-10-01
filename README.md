@@ -111,6 +111,23 @@ Stages: `1` architecture · `2` +garden · `3` +interiors · `5` +critters.
 Critter GLBs are exported individually (`critter_*.glb`) because the browser
 clones and animates them per-instance.
 
+### Tweak an animal in Blender
+
+Each critter ships as a working file — camera framed, sun lit, reference
+ground — with parts named for the browser animation rig (`Koi_Tail`,
+`Cat_HeadPivot`, `Sparrow_HeadPivot`, `Dragonfly_Wing0..3`):
+
+```bash
+blender blends/cat.blend        # move/sculpt Cat_* parts; keep part names!
+# export your edits straight back into the app (models/ + web/models/):
+blender -b blends/cat.blend -P blender/export_blend.py -- --out critter_cat.glb
+npm run check-glb
+```
+
+The reference helpers (`RefGround`, `RefCamera`, `RefSun`, `RefFill`) are
+ignored by the exporter. Regenerate all five files after changing
+`blender/lib/critters.py` with `blender -b -P blender/make_blend.py`.
+
 ## How it works
 
 - **Blender side** — everything is generated from parameters (no imported assets):
