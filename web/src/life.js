@@ -71,6 +71,19 @@ function updateKoi(dt, t) {
     }
     k.root.position.x += Math.sin(k.heading) * k.speed * dt;
     k.root.position.z += Math.cos(k.heading) * k.speed * dt;
+    // hard clamp: a koi must never leave the water
+    const ex = (k.root.position.x - POND.x) / POND.rx;
+    const ez = (k.root.position.z - POND.z) / POND.rz;
+    const eOut = ex * ex + ez * ez;
+    if (eOut > 0.85) {
+      const s = Math.sqrt(0.85 / eOut);
+      k.root.position.x = POND.x + ex * s;
+      k.root.position.z = POND.z + ez * s;
+      const toC = Math.atan2(-ez, -ex);
+      let d2 = toC - k.heading;
+      d2 = Math.atan2(Math.sin(d2), Math.cos(d2));
+      k.heading += d2 * 0.5;
+    }
     const dir = new THREE.Vector3(Math.sin(k.heading), 0, Math.cos(k.heading));
     k.root.lookAt(k.root.position.clone().add(dir));
     k.root.rotateY(Math.sin(t * 1.8 + k.phase) * 0.08);      // gentle body sway

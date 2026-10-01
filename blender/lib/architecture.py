@@ -34,6 +34,37 @@ def lattice_window(name, w, h, col, loc, rot=(0, 0, 0), cols=4, rows=5, paper=Tr
     return place_group(parts, loc, rot, name, col)
 
 
+def _gable_pane(name, col, roof_axis, plane_c, center, a0, a1,
+                plinth, wall_h, ridge, eave_h, lift, un, span_lo, span_hi):
+    """Gable wall whose top edge follows the roof's concave profile, so the
+    pane meets the roof skin with no crescent gap (a straight triangle leaves
+    a curved sliver of daylight under a t^1.4 roof)."""
+    lo = span_lo if span_lo is not None else span_hi
+    hi = span_hi if span_hi is not None else span_hi
+    top = plinth + wall_h
+    n = 9
+    verts = []
+
+    def pt(s, z):
+        return (plane_c, center + s, z) if roof_axis == 'x' else (center + s, plane_c, z)
+
+    verts.append(pt(a0, top))
+    verts.append(pt(a1, top))
+    for k in range(n, -1, -1):   # top edge from a1 back to a0, through the ridge
+        s = a0 + (a1 - a0) * k / n
+        t = abs(s) / (lo if s < 0 else hi)
+        z = ridge - (ridge - eave_h) * (t ** 1.4) + lift * (t ** 3) * (0.30 + 0.70 * C.smoothstep(0.45, 1.0, un))
+        verts.append(pt(s, z))
+    faces = [(0, k, k + 1) for k in range(1, len(verts) - 1)]
+    me = bpy.data.meshes.new(name)
+    me.from_pydata(verts, [], faces)
+    me.validate()
+    ob = bpy.data.objects.new(name, me)
+    ob.data.materials.append(C.mat("WallWhite"))
+    col.objects.link(ob)
+    C.solidify(ob, 0.14, offset=0.0)
+
+
 def make_building(name, col, cx, cy, w, d, wall_h=2.55, ridge_h=5.3, bays=3,
                   plinth=0.35, overhang=0.55, door_bay=None, windows=True,
                   side_door=None, door_w=1.5, door_h=2.1, roof_axis='x', roof_lift=0.24,
@@ -92,6 +123,18 @@ def make_building(name, col, cx, cy, w, d, wall_h=2.55, ridge_h=5.3, bays=3,
             else:
                 wall_segment(f"w{side}_{i}", x0, x1, wy, 0, wall_h)
 
+    # roof geometry (also used by the gable panes so profiles match exactly)
+    L = d + 2 * overhang if roof_axis == 'y' else w
+    S = w + 2 * overhang if roof_axis == 'y' else d + 2 * overhang
+    span_lo = span_hi = None
+    if roof_axis == 'y' and side_door is not None:
+        if side_door < 0:
+            span_lo, span_hi = w / 2, S / 2
+        else:
+            span_lo, span_hi = S / 2, w / 2
+    eave_h = plinth + wall_h + 0.15
+    ridge = plinth + ridge_h
+
     # gable-end walls; wings get a door + windows on the courtyard side
     for side in (-1, 1):
         sx = cx + side * (hw - wall_t / 2)
@@ -119,37 +162,21 @@ def make_building(name, col, cx, cy, w, d, wall_h=2.55, ridge_h=5.3, bays=3,
                                    paper_side=side)
         else:
             C.box(f"{name}_sidewall{side}", (wall_t, d - 0.34, wall_h), (sx, cy, plinth + wall_h / 2), "WallWhite", col)
-        # gable infill triangle, oriented per roof axis
+        # gable infill follows the roof profile — a straight triangle leaves a
+        # crescent gap under the concave t^1.4 roof curve
         if roof_axis == 'x':
-            verts = [(sx, cy - hd + 0.2, plinth + wall_h),
-                     (sx, cy + hd - 0.2, plinth + wall_h),
-                     (sx, cy, plinth + ridge_h - 0.10)]
+            _gable_pane(f"{name}_gable{side}", col, 'x', sx, cy,
+                        -(hd - 0.2), hd - 0.2, plinth, wall_h, ridge, eave_h,
+                        roof_lift, abs(sx - cx) / (L / 2), S / 2, S / 2)
         else:
             ey = cy + side * (hd - wall_t / 2)
-            verts = [(cx - hw + 0.2, ey, plinth + wall_h),
-                     (cx + hw - 0.2, ey, plinth + wall_h),
-                     (cx, ey, plinth + ridge_h - 0.10)]
-        me = bpy.data.meshes.new(f"{name}_gable{side}")
-        me.from_pydata(verts, [], [(0, 1, 2)])
-        me.validate()
-        ob = bpy.data.objects.new(me.name, me)
-        ob.data.materials.append(C.mat("WallWhite"))
-        col.objects.link(ob)
-        C.solidify(ob, wall_t, offset=0.0)
+            _gable_pane(f"{name}_gable{side}", col, 'y', ey, cx,
+                        -(hw - 0.2), hw - 0.2, plinth, wall_h, ridge, eave_h,
+                        roof_lift, abs(ey - cy) / (L / 2), span_lo, span_hi)
 
     # roof + ridge; tiles are a separate corrugated field just above the surface
     # x-ridge roofs end flush with the gable walls (硬山) so the hall cannot
     # overrun the wings; wings pull the courtyard-side eave flush to the hall wall
-    L = d + 2 * overhang if roof_axis == 'y' else w
-    S = w + 2 * overhang if roof_axis == 'y' else d + 2 * overhang
-    span_lo = span_hi = None
-    if roof_axis == 'y' and side_door is not None:
-        if side_door < 0:
-            span_lo, span_hi = w / 2, S / 2
-        else:
-            span_lo, span_hi = S / 2, w / 2
-    eave_h = plinth + wall_h + 0.15
-    ridge = plinth + ridge_h
     roof = C.make_roof(f"{name}_Roof", L, S, ridge, eave_h, col, corner_lift=roof_lift,
                        axis=roof_axis, span_lo=span_lo, span_hi=span_hi)
     tiles = C.make_roof_tiles(f"{name}_RoofTiles", L, S, ridge, eave_h, col,
