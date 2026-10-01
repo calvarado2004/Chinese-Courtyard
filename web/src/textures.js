@@ -82,35 +82,47 @@ export function pavingTexture() {
   });
 }
 
-// Soft stucco plaster for white walls: tone patches, trowel bands, mottling.
+// Grey brick (青砖) courses in running bond — the classic siheyuan wall.
+// One 256px tile spans ~0.75 m (uv_box scale): courses ≈ 8 cm, bricks ≈ 19 cm.
 export function wallTexture() {
   return canvasTex(256, 256, (g, w, h) => {
-    const rnd = mulberry(3);
-    g.fillStyle = '#e6e1d4';
+    const rows = 9, cols = 4;
+    const bh = h / rows, bw = w / cols;
+    const rngB = mulberry(5);
+    const tones = [];
+    for (let r = 0; r < rows; r++) {
+      const row = [];
+      for (let c = 0; c < cols; c++) row.push(rngB());
+      tones.push(row);
+    }
+    g.fillStyle = '#98938a';   // mortar
     g.fillRect(0, 0, w, h);
-    // broad tone patches so large walls vary
-    for (let i = 0; i < 10; i++) {
-      const x = rnd() * w, y = rnd() * h, r = 18 + rnd() * 40;
-      const grad = g.createRadialGradient(x, y, 0, x, y, r);
-      const lite = rnd() > 0.45;
-      grad.addColorStop(0, lite ? 'rgba(248,244,232,0.5)' : 'rgba(196,188,168,0.42)');
-      grad.addColorStop(1, 'rgba(0,0,0,0)');
-      g.fillStyle = grad;
-      g.fillRect(x - r, y - r, r * 2, r * 2);
+    for (let r = 0; r < rows; r++) {
+      const shift = (r % 2) * (bw / 2);
+      for (let c = -1; c < cols + 1; c++) {
+        const cm = ((c % cols) + cols) % cols;
+        const t = tones[r][cm];
+        const b = Math.round(96 + (t - 0.5) * 36);
+        const x = c * bw + shift;
+        g.fillStyle = `rgb(${b},${b + 4},${b + 2})`;
+        g.fillRect(x + 1.6, r * bh + 1.6, bw - 3.2, bh - 3.2);
+        // bevel: lit top edge, shaded bottom edge
+        g.fillStyle = 'rgba(255,255,255,0.13)';
+        g.fillRect(x + 1.6, r * bh + 1.6, bw - 3.2, 2);
+        g.fillStyle = 'rgba(0,0,0,0.18)';
+        g.fillRect(x + 1.6, (r + 1) * bh - 3.6, bw - 3.2, 2);
+        // occasional darker over-fired brick
+        if (t > 0.9) {
+          g.fillStyle = 'rgba(44,50,50,0.4)';
+          g.fillRect(x + 4, r * bh + 4, bw - 8, bh - 8);
+        }
+      }
     }
-    for (let i = 0; i < 9; i++) {   // faint trowel bands
-      const y = i * h / 9 + rnd() * 6;
-      g.fillStyle = `rgba(${204 + rnd() * 36},${197 + rnd() * 36},${178 + rnd() * 34},0.30)`;
-      g.fillRect(0, y, w, 8 + rnd() * 14);
-    }
-    for (let i = 0; i < 1300; i++) {   // mottling
-      const a = Math.random() * 0.10;
-      g.fillStyle = Math.random() > 0.5 ? `rgba(255,255,255,${a})` : `rgba(88,80,62,${a})`;
-      g.fillRect(Math.random() * w, Math.random() * h, 2, 2);
-    }
-    for (let i = 0; i < 800; i++) {   // fine grain
-      g.fillStyle = `rgba(112,104,86,${Math.random() * 0.07})`;
-      g.fillRect(Math.random() * w, Math.random() * h, 1, 1);
+    // grime specks
+    for (let i = 0; i < 900; i++) {
+      const a = Math.random() * 0.08;
+      g.fillStyle = Math.random() > 0.4 ? `rgba(28,32,32,${a})` : `rgba(255,255,255,${a})`;
+      g.fillRect(Math.random() * w, Math.random() * h, 2, 1);
     }
   });
 }
